@@ -50,7 +50,12 @@
   }
   .still .card{animation:none}
   @keyframes pop{from{opacity:0;transform:scale(.85) rotate(var(--rot))}}
-  .card:hover{transform:rotate(0) translateY(-6px) scale(1.03);box-shadow:0 10px 0 rgba(0,0,0,.08),0 22px 30px -12px rgba(60,40,10,.3);z-index:3}
+  .card:hover{
+    transform:perspective(800px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) translateY(-6px) scale(1.03);
+    transition:transform .12s ease-out, box-shadow .25s;
+    background-image:radial-gradient(circle at var(--mx,50%) var(--my,50%),rgba(255,255,255,.3),transparent 58%);
+    box-shadow:0 10px 0 rgba(0,0,0,.08),0 22px 30px -12px rgba(60,40,10,.3);z-index:3;
+  }
   .card:active{transform:scale(.98)}
   .card::before{content:"";position:absolute;width:70%;aspect-ratio:1;border-radius:50%;background:rgba(255,255,255,.28);right:-18%;top:-30%}
   .card::after{content:"";position:absolute;width:40%;aspect-ratio:1;border-radius:50%;background:rgba(255,255,255,.2);left:-10%;bottom:-22%}
@@ -62,12 +67,9 @@
   .icon img{width:62%;height:62%;object-fit:contain;pointer-events:none}
   .name{position:relative;z-index:1;font-weight:800;font-size:clamp(14px,8cqmin,24px);text-align:center;padding:0 10px;letter-spacing:.2px}
 
-  /* compteur de clics */
-  .count{
-    position:absolute;z-index:2;right:12px;bottom:10px;font-size:12px;font-weight:800;
-    background:rgba(255,255,255,.65);padding:3px 9px;border-radius:999px;display:none;
-  }
-  .count.on{display:block}
+  /* compte à rebours : discret */
+  .cd{font-size:12px;color:var(--muted);opacity:.75;margin-top:1px}
+  .cd:empty{display:none}
 
   /* boutons du mode modification */
   .tools{position:absolute;top:10px;right:10px;z-index:3;display:none;gap:6px}
@@ -90,8 +92,8 @@
   dialog::backdrop{background:rgba(40,30,15,.35)}
   dialog h2{margin-bottom:8px;font-size:20px}
   dialog label{display:block;color:var(--muted);font-size:13px;margin:12px 0 6px}
-  dialog input[type=text]{width:100%;background:var(--bg);border:2px solid transparent;color:var(--ink);padding:12px 14px;border-radius:14px;font-size:15px;outline:none;font-family:inherit}
-  dialog input[type=text]:focus{border-color:var(--ink)}
+  dialog input[type=text],dialog input[type=date],dialog input[type=time]{width:100%;background:var(--bg);border:2px solid transparent;color:var(--ink);padding:12px 14px;border-radius:14px;font-size:15px;outline:none;font-family:inherit}
+  dialog input[type=text]:focus,dialog input[type=date]:focus,dialog input[type=time]:focus{border-color:var(--ink)}
   .row{display:flex;gap:12px}
   .row > div{flex:1}
   input[type=color]{width:100%;height:46px;border:none;background:var(--bg);border-radius:14px;padding:4px;cursor:pointer}
@@ -99,14 +101,52 @@
   .btn{border:none;padding:11px 20px;border-radius:999px;font-size:14px;font-weight:700;cursor:pointer;color:#fff;background:var(--ink);font-family:inherit}
   .btn.ghost{background:var(--bg);color:var(--ink)}
 
+  /* ---------- Petites animations légères ---------- */
+  header,.pile,.foot{position:relative;z-index:1}
+  header{animation:drop .6s both}
+  @keyframes drop{from{opacity:0;transform:translateY(-10px)}}
+  .colon{animation:blink 1s steps(1) infinite}
+  @keyframes blink{50%{opacity:.25}}
+  .icon{animation:bob 4s ease-in-out infinite}
+  .cell:nth-child(2n) .icon{animation-delay:-1.3s}
+  .cell:nth-child(3n) .icon{animation-delay:-2.4s}
+  @keyframes bob{50%{transform:translateY(-4px)}}
+  .card:hover .icon{animation:none;transform:translate(var(--tx,0px),var(--ty,0px)) scale(1.08) rotate(-4deg);transition:transform .15s ease-out}
+  .bubbles{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+  .bubbles i{
+    position:absolute;bottom:-90px;border-radius:50%;background:var(--b);opacity:.28;
+    animation:rise var(--t) linear infinite;animation-delay:var(--d);
+  }
+  @keyframes rise{
+    0%{transform:translate(0,0)}
+    50%{transform:translate(var(--dx),-60vh)}
+    100%{transform:translate(0,-120vh)}
+  }
+
+  /* ---------- Horloge en grand ---------- */
+  .big{
+    position:fixed;inset:0;z-index:50;background:var(--bg);cursor:pointer;
+    display:none;flex-direction:column;align-items:center;justify-content:center;gap:2vh;text-align:center;
+  }
+  .big.on{display:flex;animation:fade .35s both}
+  @keyframes fade{from{opacity:0;transform:scale(.97)}}
+  .big-time{font-size:clamp(70px,24vw,380px);font-weight:800;letter-spacing:-.04em;line-height:1}
+  .big-time small{font-size:.2em;color:var(--muted);letter-spacing:0;margin-left:.25em;font-weight:700}
+  .big-date{font-size:clamp(16px,3vw,34px);color:var(--muted);text-transform:capitalize}
+  .big-cd{font-size:clamp(13px,2vw,22px);color:var(--muted);opacity:.8}
+  .big-cd:empty{display:none}
+  .big-hint{position:absolute;bottom:14px;font-size:11px;color:var(--muted);opacity:.4}
+
+  @media (prefers-reduced-motion:reduce){ *{animation:none!important} }
   @media (max-width:560px){ .search{width:100%} header{flex-direction:column;align-items:stretch} }
 </style>
 </head>
 <body>
+<div class="bubbles" id="bubbles"></div>
 <header>
   <div class="left">
     <div class="clock" id="clock">--:--</div>
-    <div class="meta"><span class="hello" id="hello"></span><span class="date" id="date"></span></div>
+    <div class="meta"><span class="hello" id="hello"></span><span class="date" id="date"></span><span class="cd" id="cd"></span></div>
   </div>
   <input class="search" id="search" type="search" placeholder="Rechercher…">
 </header>
@@ -114,7 +154,14 @@
 <main class="pile" id="pile"></main>
 
 <div class="foot">
-  <button id="add">+ ajouter</button>·<button id="edit">modifier</button>·<button id="sort">trier par clics</button>·<button id="zero">compteurs à zéro</button>·<button id="reset">réinitialiser</button>
+  <button id="add">+ ajouter</button>·<button id="edit">modifier</button>·<button id="cd-btn">compte à rebours</button>·<button id="big-btn">horloge</button>·<button id="reset">réinitialiser</button>
+</div>
+
+<div class="big" id="big">
+  <div class="big-time" id="big-time"></div>
+  <div class="big-date" id="big-date"></div>
+  <div class="big-cd" id="big-cd"></div>
+  <div class="big-hint">clique ou appuie sur Échap pour fermer</div>
 </div>
 
 <dialog id="dlg">
@@ -137,6 +184,29 @@
     <div class="actions">
       <button type="button" class="btn ghost" id="cancel">Annuler</button>
       <button class="btn" type="submit" id="ok">Ajouter</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="cd-dlg">
+  <form method="dialog" id="cd-form">
+    <h2>Compte à rebours</h2>
+    <label for="cd-label">Nom (ex : Sortie de la nouvelle extension)</label>
+    <input type="text" id="cd-label" placeholder="Mon événement">
+    <div class="row">
+      <div>
+        <label for="cd-date">Date</label>
+        <input type="date" id="cd-date" required>
+      </div>
+      <div>
+        <label for="cd-time">Heure</label>
+        <input type="time" id="cd-time" value="00:00">
+      </div>
+    </div>
+    <div class="actions">
+      <button type="button" class="btn ghost" id="cd-remove">Supprimer</button>
+      <button type="button" class="btn ghost" id="cd-cancel">Annuler</button>
+      <button class="btn" type="submit">Enregistrer</button>
     </div>
   </form>
 </dialog>
@@ -184,12 +254,6 @@ function layout(n){
   pile.style.setProperty("--rows", Math.ceil(n/best));
 }
 
-function updateCount(el, s){
-  const n = s.clicks || 0;
-  el.textContent = "👆 " + n;
-  el.classList.toggle("on", n > 0);
-}
-
 function render(){
   const q = document.getElementById("search").value.trim().toLowerCase();
   const pile = document.getElementById("pile");
@@ -232,8 +296,6 @@ function render(){
 
     const name = document.createElement("div"); name.className = "name"; name.textContent = s.name;
 
-    const count = document.createElement("div"); count.className = "count"; updateCount(count, s);
-
     const tools = document.createElement("div"); tools.className = "tools";
     const ed = document.createElement("button"); ed.textContent = "✎"; ed.title = "Modifier";
     ed.onclick = e => { e.preventDefault(); e.stopPropagation(); openDialog(i); };
@@ -244,15 +306,9 @@ function render(){
     };
     tools.append(ed, del);
 
-    // compteur : clic gauche, clic molette
-    const hit = e => {
-      if(editing){ e.preventDefault(); return; }
-      s.clicks = (s.clicks||0) + 1; save(); updateCount(count, s);
-    };
-    a.addEventListener("click", hit);
-    a.addEventListener("auxclick", e=>{ if(e.button===1) hit(e); });
+    a.addEventListener("click", e=>{ if(editing) e.preventDefault(); });
 
-    a.append(icon, name, count, tools);
+    a.append(icon, name, tools);
     cell.appendChild(a);
     pile.appendChild(cell);
   });
@@ -284,7 +340,7 @@ document.getElementById("form").addEventListener("submit", () => {
     Object.assign(sites[editIdx], {name, url, emoji, c});
     delete sites[editIdx].c1; delete sites[editIdx].c2;
   } else {
-    sites.push({name, url, emoji, c, clicks:0});
+    sites.push({name, url, emoji, c});
   }
   save(); animate = false; render();
 });
@@ -292,7 +348,11 @@ document.getElementById("form").addEventListener("submit", () => {
 /* ---------- Divers ---------- */
 function tick(){
   const d = new Date();
-  document.getElementById("clock").textContent = d.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});
+  const hh = pad(d.getHours()), mm = pad(d.getMinutes());
+  document.getElementById("clock").innerHTML = hh + '<span class="colon">:</span>' + mm;
+  document.getElementById("big-time").innerHTML = hh + '<span class="colon">:</span>' + mm + '<small>' + pad(d.getSeconds()) + '</small>';
+  document.getElementById("big-date").textContent = d.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  document.getElementById("big-cd").textContent = document.getElementById("cd").textContent;
   document.getElementById("date").textContent = d.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
   const h = d.getHours();
   document.getElementById("hello").textContent = h<5 ? "Bonne nuit" : h<12 ? "Bonjour" : h<18 ? "Bon après-midi" : "Bonsoir";
@@ -307,15 +367,99 @@ addEventListener("resize", ()=>layout(document.querySelectorAll(".card").length)
 document.getElementById("edit").onclick = e => {
   editing = !editing; e.target.textContent = editing ? "terminé" : "modifier"; animate=false; render();
 };
-document.getElementById("sort").onclick = () => {
-  sites.sort((a,b)=>(b.clicks||0)-(a.clicks||0)); save(); animate=false; render();
+/* ---------- Compte à rebours ---------- */
+const CD_KEY = "mes-sites-cd";
+let cd = null;
+try{ cd = JSON.parse(localStorage.getItem(CD_KEY)); }catch(e){}
+function saveCd(){ try{ if(cd) localStorage.setItem(CD_KEY, JSON.stringify(cd)); else localStorage.removeItem(CD_KEY); }catch(e){} }
+function updateCd(){
+  const el = document.getElementById("cd");
+  if(!cd || !cd.ts){ el.textContent = ""; return; }
+  const name = cd.label || "Compte à rebours";
+  const ms = cd.ts - Date.now();
+  if(ms <= 0){ el.textContent = "✓ " + name + " : c'est l'heure !"; return; }
+  const s = Math.floor(ms/1000), j = Math.floor(s/86400), h = Math.floor(s%86400/3600), m = Math.floor(s%3600/60), sec = s%60;
+  const txt = j>0 ? j+" j "+h+" h "+m+" min" : h>0 ? h+" h "+m+" min" : m+" min "+String(sec).padStart(2,"0")+" s";
+  el.textContent = "⏳ " + name + " · " + txt;
+}
+updateCd(); setInterval(updateCd, 1000);
+
+const cdDlg = document.getElementById("cd-dlg");
+function pad(n){ return String(n).padStart(2,"0"); }
+document.getElementById("cd-btn").onclick = () => {
+  document.getElementById("cd-label").value = cd ? (cd.label||"") : "";
+  if(cd && cd.ts){
+    const d = new Date(cd.ts);
+    document.getElementById("cd-date").value = d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+    document.getElementById("cd-time").value = pad(d.getHours())+":"+pad(d.getMinutes());
+  } else {
+    document.getElementById("cd-date").value = "";
+    document.getElementById("cd-time").value = "00:00";
+  }
+  document.getElementById("cd-remove").style.display = cd ? "" : "none";
+  cdDlg.showModal();
 };
-document.getElementById("zero").onclick = () => {
-  if(confirm("Remettre tous les compteurs de clics à zéro ?")){ sites.forEach(s=>s.clicks=0); save(); animate=false; render(); }
-};
+document.getElementById("cd-cancel").onclick = () => cdDlg.close();
+document.getElementById("cd-remove").onclick = () => { cd = null; saveCd(); updateCd(); cdDlg.close(); };
+document.getElementById("cd-form").addEventListener("submit", () => {
+  const date = document.getElementById("cd-date").value;
+  const time = document.getElementById("cd-time").value || "00:00";
+  if(!date) return;
+  const ts = new Date(date + "T" + time).getTime();
+  if(isNaN(ts)) return;
+  cd = {label: document.getElementById("cd-label").value.trim(), ts};
+  saveCd(); updateCd();
+});
 document.getElementById("reset").onclick = () => {
   if(confirm("Remettre la liste de départ ?")){ sites = DEFAULTS.map(s=>({...s})); save(); animate=false; render(); }
 };
+/* ---------- Horloge en grand ---------- */
+const big = document.getElementById("big");
+document.getElementById("big-btn").onclick = () => big.classList.add("on");
+big.onclick = () => big.classList.remove("on");
+addEventListener("keydown", e => { if(e.key === "Escape") big.classList.remove("on"); });
+
+/* ---------- Les blocs suivent doucement la souris ---------- */
+(function(){
+  const MAX = 5;   // inclinaison maximale en degrés
+  const SHIFT = 5; // léger décalage de l'icône en pixels
+  const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const pile = document.getElementById("pile");
+  pile.addEventListener("pointermove", e => {
+    if(calm || editing || dragFrom >= 0 || e.pointerType === "touch") return;
+    const card = e.target.closest(".card");
+    if(!card) return;
+    const r = card.getBoundingClientRect();
+    const x = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+    const y = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
+    const s = card.style;
+    s.setProperty("--ry", ((x - .5) * 2 * MAX).toFixed(2) + "deg");
+    s.setProperty("--rx", (-(y - .5) * 2 * MAX).toFixed(2) + "deg");
+    s.setProperty("--mx", (x * 100).toFixed(1) + "%");
+    s.setProperty("--my", (y * 100).toFixed(1) + "%");
+    s.setProperty("--tx", ((x - .5) * 2 * SHIFT).toFixed(1) + "px");
+    s.setProperty("--ty", ((y - .5) * 2 * SHIFT).toFixed(1) + "px");
+  });
+  pile.addEventListener("pointerout", e => {
+    const card = e.target.closest(".card");
+    if(!card || card.contains(e.relatedTarget)) return;
+    ["--rx","--ry","--mx","--my","--tx","--ty"].forEach(p => card.style.removeProperty(p));
+  });
+})();
+
+/* ---------- Bulles de fond ---------- */
+(function(){
+  const box = document.getElementById("bubbles");
+  for(let i=0; i<14; i++){
+    const b = document.createElement("i"), size = 14 + Math.random()*46;
+    b.style.cssText = "width:"+size+"px;height:"+size+"px;left:"+(Math.random()*100)+"%;" +
+      "--b:"+PALETTE[i % PALETTE.length]+";--t:"+(18+Math.random()*18)+"s;--d:-"+(Math.random()*30)+"s;" +
+      "--dx:"+((Math.random()*80)-40)+"px";
+    box.appendChild(b);
+  }
+})();
+
+tick();
 render();
 
 /* ---------- Icône de l'onglet : on recadre l'image pour qu'elle remplisse tout le carré ---------- */
